@@ -1,0 +1,6 @@
+{
+  "name": "Yiğit Poyraz - 30 Haftalık Uygulama Portalı",
+  "description": "Yiğit Poyraz tarafından geliştirilen 30 haftalık web uygulamaları ve projeleri başlatma arayüzü.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
