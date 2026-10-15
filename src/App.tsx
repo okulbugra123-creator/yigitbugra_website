@@ -10,7 +10,8 @@ import { BatchLinkManagerModal } from './components/BatchLinkManagerModal';
 import { CurriculumRoadmap } from './components/CurriculumRoadmap';
 import { ClockWidget } from './components/ClockWidget';
 import { Footer } from './components/Footer';
-import { Layers, Sparkles, AlertCircle, Link2, Plus, CloudCheck, Globe } from 'lucide-react';
+import { AdminLoginModal } from './components/AdminLoginModal';
+import { Layers, Sparkles, AlertCircle, Link2, Plus, Globe, ShieldCheck } from 'lucide-react';
 import { 
   saveProjectToFirestore, 
   saveAllProjectsToFirestore, 
@@ -18,15 +19,54 @@ import {
   fetchProjectsFromFirestore 
 } from './services/projectsService';
 
+// Helper to safely merge loaded data with all 38 weeks
+function mergeProjects(loadedApps: any[]): WeeklyApp[] {
+  if (!Array.isArray(loadedApps) || loadedApps.length === 0) return INITIAL_WEEKLY_APPS;
+  const map = new Map<number, any>();
+  loadedApps.forEach(item => {
+    if (item && typeof item.id === 'number') {
+      map.set(item.id, item);
+    }
+  });
+
+  return INITIAL_WEEKLY_APPS.map(baseApp => {
+    const existing = map.get(baseApp.id);
+    if (existing) {
+      return {
+        ...baseApp,
+        title: existing.customTitle || existing.title || baseApp.title,
+        customTitle: existing.customTitle || existing.title || baseApp.title,
+        description: existing.customDescription || existing.description || baseApp.description,
+        customDescription: existing.customDescription || existing.description || baseApp.description,
+        projectUrl: existing.projectUrl || '',
+        githubUrl: existing.githubUrl || '',
+        category: existing.category || baseApp.category,
+        status: existing.status || (existing.projectUrl ? 'Yayında' : 'Boş (Proje Bekleniyor)')
+      };
+    }
+    return baseApp;
+  });
+}
+
 export default function App() {
-  // 30 Weekly Apps state, synchronized with localStorage & Firestore
+  // Admin authentication state (Bugra / Bugra123.)
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('yp_admin_logged_in') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+
+  // 38 Weekly Apps state, synchronized with localStorage & Firestore
   const [apps, setApps] = useState<WeeklyApp[]>(() => {
     try {
       const saved = localStorage.getItem('yp_custom_projects_data');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length === 30) {
-          return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return mergeProjects(parsed);
         }
       }
     } catch {
@@ -41,18 +81,43 @@ export default function App() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('Tümü');
-  const [selectedRange, setSelectedRange] = useState<'all' | '1-10' | '11-20' | '21-30'>('all');
+  const [selectedRange, setSelectedRange] = useState<'all' | '1-10' | '11-20' | '21-30' | '31-38'>('all');
   const [linkFilter, setLinkFilter] = useState<'all' | 'with-link' | 'empty'>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const [favorites, setFavorites] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('yp_portal_favorites');
-      return saved ? JSON.parse(saved) : [1, 6, 20];
+      return saved ? JSON.parse(saved) : [1, 6, 20, 38];
     } catch {
-      return [1, 6, 20];
+      return [1, 6, 20, 38];
     }
   });
+
+  // Admin login success
+  const handleLoginSuccess = () => {
+    setIsAdmin(true);
+    try {
+      localStorage.setItem('yp_admin_logged_in', 'true');
+    } catch {}
+  };
+
+  // Admin logout
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+    try {
+      localStorage.removeItem('yp_admin_logged_in');
+    } catch {}
+  };
+
+  // Guard for admin-only actions
+  const requireAdmin = (action: () => void) => {
+    if (isAdmin) {
+      action();
+    } else {
+      setIsAdminLoginOpen(true);
+    }
+  };
 
   // Cross-device server sync fallback
   const syncToServer = async (projectsList: WeeklyApp[]) => {
@@ -71,20 +136,22 @@ export default function App() {
   useEffect(() => {
     // 1. Subscribe to live Firestore updates from any device
     const unsubscribe = subscribeToFirestoreProjects((cloudProjects) => {
-      if (cloudProjects && cloudProjects.length === 30) {
-        setApps(cloudProjects);
+      if (cloudProjects && cloudProjects.length > 0) {
+        const merged = mergeProjects(cloudProjects);
+        setApps(merged);
         try {
-          localStorage.setItem('yp_custom_projects_data', JSON.stringify(cloudProjects));
+          localStorage.setItem('yp_custom_projects_data', JSON.stringify(merged));
         } catch {}
       }
     });
 
     // 2. Fetch initial cloud data or seed if cloud is empty
     fetchProjectsFromFirestore().then((cloudData) => {
-      if (cloudData && cloudData.length === 30) {
-        setApps(cloudData);
+      if (cloudData && cloudData.length > 0) {
+        const merged = mergeProjects(cloudData);
+        setApps(merged);
         try {
-          localStorage.setItem('yp_custom_projects_data', JSON.stringify(cloudData));
+          localStorage.setItem('yp_custom_projects_data', JSON.stringify(merged));
         } catch {}
       } else {
         // If cloud collection is new, sync local projects to cloud so other devices get them
@@ -92,13 +159,14 @@ export default function App() {
           const localSaved = localStorage.getItem('yp_custom_projects_data');
           if (localSaved) {
             const parsed = JSON.parse(localSaved);
-            if (Array.isArray(parsed) && parsed.length === 30) {
-              saveAllProjectsToFirestore(parsed);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const merged = mergeProjects(parsed);
+              saveAllProjectsToFirestore(merged);
               return;
             }
           }
         } catch {}
-        // Initialize default 30 weeks in Firestore
+        // Initialize default 38 weeks in Firestore
         saveAllProjectsToFirestore(INITIAL_WEEKLY_APPS);
       }
     });
@@ -256,6 +324,7 @@ export default function App() {
       if (selectedRange === '1-10' && (app.weekNumber < 1 || app.weekNumber > 10)) return false;
       if (selectedRange === '11-20' && (app.weekNumber < 11 || app.weekNumber > 20)) return false;
       if (selectedRange === '21-30' && (app.weekNumber < 21 || app.weekNumber > 30)) return false;
+      if (selectedRange === '31-38' && (app.weekNumber < 31 || app.weekNumber > 38)) return false;
 
       // Category filter
       if (selectedCategory !== 'Tümü' && app.category !== selectedCategory) return false;
@@ -286,10 +355,13 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-[#0c0507] text-stone-100 selection:bg-red-900 selection:text-amber-200">
       
-      {/* Top Header with Y.P Logo & Yiğit Poyraz Title */}
+      {/* Top Header with Y.P Logo, Yiğit Poyraz Title & Admin Controls */}
       <Header
         onRandomLaunch={handleRandomLaunch}
-        onOpenBatchManager={() => setIsBatchManagerOpen(true)}
+        onOpenBatchManager={() => requireAdmin(() => setIsBatchManagerOpen(true))}
+        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        onAdminLogout={handleAdminLogout}
+        isAdmin={isAdmin}
         activeCount={filteredApps.length}
         customLinksCount={customLinksCount}
       />
@@ -309,10 +381,10 @@ export default function App() {
         customLinksCount={customLinksCount}
         linkFilter={linkFilter}
         onSelectLinkFilter={setLinkFilter}
-        onOpenBatchManager={() => setIsBatchManagerOpen(true)}
+        onOpenBatchManager={() => requireAdmin(() => setIsBatchManagerOpen(true))}
       />
 
-      {/* Main 30-Week Application Showcase Grid */}
+      {/* Main 38-Week Application Showcase Grid */}
       <main id="apps-section" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         {/* Section Header */}
@@ -320,20 +392,20 @@ export default function App() {
           <div className="flex flex-wrap items-center gap-2.5">
             <Layers className="w-4 h-4 text-amber-500" />
             <h2 className="text-lg font-bold text-stone-100">
-              30 Haftalık Uygulama Koleksiyonu
+              38 Haftalık Uygulama Koleksiyonu
             </h2>
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-stone-900 border border-red-950/80 text-amber-400 font-bold">
-              {filteredApps.length} / 30
+              {filteredApps.length} / {apps.length}
             </span>
             <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Bulut Eşitleme Aktif (Firestore): Başka cihazdan girseniz de linkleriniz görünür
+              Bulut Eşitleme Aktif (Firestore): Tüm cihazlardan anlık senkronize
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsBatchManagerOpen(true)}
+              onClick={() => requireAdmin(() => setIsBatchManagerOpen(true))}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 border border-amber-500/50 text-amber-400 text-xs font-semibold transition-colors"
             >
               <Link2 className="w-3.5 h-3.5" />
@@ -373,10 +445,12 @@ export default function App() {
                 key={app.id}
                 app={app}
                 onLaunch={(clickedApp) => setSelectedApp(clickedApp)}
-                onEdit={(clickedApp) => setEditingApp(clickedApp)}
+                onEdit={(clickedApp) => requireAdmin(() => setEditingApp(clickedApp))}
                 onQuickSaveUrl={handleQuickSaveUrl}
                 isFavorite={favorites.includes(app.id)}
                 onToggleFavorite={handleToggleFavorite}
+                isAdmin={isAdmin}
+                onRequireAdmin={() => setIsAdminLoginOpen(true)}
               />
             ))}
           </div>
@@ -384,7 +458,7 @@ export default function App() {
 
       </main>
 
-      {/* 30-Week Curriculum Roadmap Section */}
+      {/* 38-Week Curriculum Roadmap Section */}
       <CurriculumRoadmap
         apps={apps}
         onLaunch={(clickedApp) => setSelectedApp(clickedApp)}
@@ -395,7 +469,7 @@ export default function App() {
         app={selectedApp}
         onClose={() => setSelectedApp(null)}
         onSelectApp={(newApp) => setSelectedApp(newApp)}
-        onEditApp={(appToEdit) => setEditingApp(appToEdit)}
+        onEditApp={(appToEdit) => requireAdmin(() => setEditingApp(appToEdit))}
         allApps={apps}
         isFavorite={selectedApp ? favorites.includes(selectedApp.id) : false}
         onToggleFavorite={handleToggleFavorite}
@@ -410,12 +484,19 @@ export default function App() {
         onClearLink={handleClearLink}
       />
 
-      {/* 30 Weeks Batch Link Manager Modal */}
+      {/* 38 Weeks Batch Link Manager Modal */}
       <BatchLinkManagerModal
         apps={apps}
         isOpen={isBatchManagerOpen}
         onClose={() => setIsBatchManagerOpen(false)}
         onSaveAll={handleSaveAllApps}
+      />
+
+      {/* Admin Login Modal (Bugra / Bugra123.) */}
+      <AdminLoginModal
+        isOpen={isAdminLoginOpen}
+        onClose={() => setIsAdminLoginOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
 
       {/* Real-time Clock & Date Widget (Sağ Alt Köşede Saat & Tarih) */}

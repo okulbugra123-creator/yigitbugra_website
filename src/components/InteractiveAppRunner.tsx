@@ -80,6 +80,22 @@ export const InteractiveAppRunner: React.FC<Props> = ({ app }) => {
       return <ToneSynthApp />;
     case 'final_showcase':
       return <FinalShowcaseApp />;
+    case 'websocket_chat':
+      return <WebSocketChatApp />;
+    case 'pwa_offline':
+      return <PwaOfflineApp />;
+    case 'webgl_three':
+      return <WebGLThreeApp />;
+    case 'web_assembly':
+      return <WebAssemblyApp />;
+    case 'micro_frontend':
+      return <MicroFrontendApp />;
+    case 'cloud_db':
+      return <CloudDbApp />;
+    case 'ai_assistant':
+      return <AiAssistantApp />;
+    case 'grand_showcase':
+      return <GrandShowcaseApp />;
     default:
       return (
         <div className="p-8 text-center text-stone-400">
@@ -2062,3 +2078,318 @@ function FinalShowcaseApp() {
     </div>
   );
 }
+
+/* --- 31. WebSocket Canlı Sohbet Simülatörü --- */
+function WebSocketChatApp() {
+  const [messages, setMessages] = useState([
+    { id: 1, sender: 'Sistem', text: 'WebSocket kanalına bağlanıldı [ws://live.yigitpoyraz.io:8080]', time: 'Şimdi' },
+    { id: 2, sender: 'Yiğit Poyraz', text: 'Hafta 31 gerçek zamanlı soket kanalı aktif!', time: 'Şimdi' }
+  ]);
+  const [input, setInput] = useState('');
+
+  const send = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const newMsg = { id: Date.now(), sender: 'Siz', text: input.trim(), time: 'Şimdi' };
+    setMessages(prev => [...prev, newMsg]);
+    setInput('');
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        sender: 'Bot Sunucu',
+        text: `Echo Yanıtı (${new Date().toLocaleTimeString()}): "${newMsg.text}" başarıyla iletildi.`,
+        time: 'Şimdi'
+      }]);
+    }, 400);
+  };
+
+  return (
+    <div className="p-4 bg-stone-950/80 rounded-xl border border-red-950/60 max-w-md mx-auto text-xs">
+      <div className="flex items-center justify-between pb-2 mb-3 border-b border-stone-800">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="font-mono text-stone-300 font-semibold">ws://gateway-live/yigitpoyraz</span>
+        </div>
+        <span className="text-[10px] text-amber-400 font-mono">Gecikme: 14ms</span>
+      </div>
+      <div className="h-44 overflow-y-auto space-y-2 mb-3 pr-1 text-[11px]">
+        {messages.map(m => (
+          <div key={m.id} className="p-2 rounded bg-stone-900 border border-stone-800">
+            <span className="font-bold text-amber-400 mr-2">{m.sender}:</span>
+            <span className="text-stone-200">{m.text}</span>
+          </div>
+        ))}
+      </div>
+      <form onSubmit={send} className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Soket mesajı gönder..."
+          className="flex-1 px-3 py-1.5 bg-stone-900 rounded border border-stone-800 text-stone-200 focus:outline-none focus:border-amber-500 text-xs"
+        />
+        <button type="submit" className="px-3 py-1.5 bg-gradient-to-r from-red-700 to-amber-600 text-amber-100 font-bold rounded">
+          İlet
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/* --- 32. PWA Çevrimdışı Bellek Simülatörü --- */
+function PwaOfflineApp() {
+  const [isOnline, setIsOnline] = useState(true);
+  const [cachedAssets, setCachedAssets] = useState([
+    { name: 'index.html', size: '14.2 KB', status: 'Önbellekte' },
+    { name: 'bundle.js', size: '210.4 KB', status: 'Önbellekte' },
+    { name: 'yigitpoyraz_styles.css', size: '38.8 KB', status: 'Önbellekte' }
+  ]);
+
+  return (
+    <div className="p-5 bg-stone-950/80 rounded-xl border border-red-950/60 max-w-md mx-auto text-xs">
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-bold text-stone-200">ServiceWorker v2.4 (Cache-First)</span>
+        <button
+          onClick={() => setIsOnline(!isOnline)}
+          className={`px-2.5 py-1 rounded text-[11px] font-bold ${
+            isOnline ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-red-950 text-red-300 border border-red-700'
+          }`}
+        >
+          {isOnline ? '● Ağ Bağlantısı Açık' : '○ Çevrimdışı (Offline)'}
+        </button>
+      </div>
+      <div className="space-y-2 mb-4">
+        {cachedAssets.map((asset, i) => (
+          <div key={i} className="flex items-center justify-between p-2 rounded bg-stone-900 border border-stone-800 text-[11px]">
+            <span className="font-mono text-stone-300">{asset.name}</span>
+            <span className="font-mono text-amber-400">{asset.size}</span>
+            <span className="text-emerald-400">{asset.status}</span>
+          </div>
+        ))}
+      </div>
+      <div className="p-2.5 rounded bg-amber-950/30 border border-amber-900/50 text-[11px] text-amber-200">
+        💡 Çevrimdışı modda bile IndexedDB ve Cache Storage sayesinde Yiğit Poyraz web uygulaması kesintisiz açılır.
+      </div>
+    </div>
+  );
+}
+
+/* --- 33. WebGL / 3D Sahne Simülatörü --- */
+function WebGLThreeApp() {
+  const [rotation, setRotation] = useState(45);
+
+  return (
+    <div className="p-5 bg-stone-950/80 rounded-xl border border-red-950/60 max-w-md mx-auto text-center text-xs">
+      <div className="text-stone-400 mb-4">WebGL 3D Geometri & Perspektif Kamera Motoru</div>
+      <div className="h-44 flex items-center justify-center bg-stone-900/70 rounded-lg border border-stone-800 mb-4 overflow-hidden relative">
+        <div 
+          className="w-20 h-20 bg-gradient-to-tr from-red-600 via-amber-500 to-yellow-400 rounded-lg shadow-2xl transition-transform duration-200 border border-amber-300/60"
+          style={{ transform: `rotateX(${rotation}deg) rotateY(${rotation * 1.5}deg) rotateZ(${rotation * 0.5}deg)` }}
+        />
+        <div className="absolute bottom-2 right-2 text-[10px] font-mono text-stone-500">60 FPS | 1,240 Vertices</div>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="360"
+        value={rotation}
+        onChange={e => setRotation(parseInt(e.target.value))}
+        className="w-full accent-amber-500"
+      />
+      <div className="flex justify-between text-[11px] text-stone-400 mt-1 font-mono">
+        <span>Açı: {rotation}°</span>
+        <span>Three.js Shaders</span>
+      </div>
+    </div>
+  );
+}
+
+/* --- 34. WebAssembly (WASM) Performans Kıyaslayıcı --- */
+function WebAssemblyApp() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<{ wasm: number; js: number } | null>(null);
+
+  const runBenchmark = () => {
+    setRunning(true);
+    setTimeout(() => {
+      setResult({ wasm: 14.8, js: 62.4 });
+      setRunning(false);
+    }, 600);
+  };
+
+  return (
+    <div className="p-5 bg-stone-950/80 rounded-xl border border-red-950/60 max-w-md mx-auto text-xs">
+      <div className="font-bold text-stone-200 mb-2">WebAssembly vs Saf JavaScript (10.000.000 Matris Çarpımı)</div>
+      <p className="text-stone-400 text-[11px] mb-4">WASM derlenmiş ikili kod ile tarayıcıda C++/Rust hızında hesaplama.</p>
+      
+      {result && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-3 bg-stone-900 rounded border border-emerald-800 text-center">
+            <span className="text-[10px] text-stone-400 block">WASM İkili Hızı</span>
+            <strong className="text-emerald-400 font-mono text-lg">{result.wasm} ms</strong>
+            <span className="text-[10px] text-emerald-500 block font-bold">4.2x Daha Hızlı</span>
+          </div>
+          <div className="p-3 bg-stone-900 rounded border border-stone-800 text-center">
+            <span className="text-[10px] text-stone-400 block">Klasik JS Motoru</span>
+            <strong className="text-amber-400 font-mono text-lg">{result.js} ms</strong>
+            <span className="text-[10px] text-stone-500 block">Standart JIT</span>
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={runBenchmark}
+        disabled={running}
+        className="w-full py-2 bg-gradient-to-r from-red-700 to-amber-600 text-amber-100 font-bold rounded hover:opacity-90 transition-opacity"
+      >
+        {running ? 'Hesaplanıyor...' : 'WASM Performans Testini Başlat'}
+      </button>
+    </div>
+  );
+}
+
+/* --- 35. Mikro Frontend Modül Yükleyici --- */
+function MicroFrontendApp() {
+  const [activeModule, setActiveModule] = useState<'auth' | 'catalog' | 'checkout'>('auth');
+
+  return (
+    <div className="p-5 bg-stone-950/80 rounded-xl border border-red-950/60 max-w-md mx-auto text-xs">
+      <div className="font-bold text-stone-200 mb-2">Module Federation & Bağımsız Dağıtım</div>
+      <div className="flex gap-1.5 mb-3">
+        {(['auth', 'catalog', 'checkout'] as const).map(m => (
+          <button
+            key={m}
+            onClick={() => setActiveModule(m)}
+            className={`flex-1 py-1.5 rounded font-mono text-[11px] uppercase ${
+              activeModule === m ? 'bg-amber-500 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400'
+            }`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+      <div className="p-4 bg-stone-900 rounded border border-stone-800 text-stone-300">
+        <span className="text-[10px] text-amber-400 font-mono block mb-1">
+          Uzak Modül: http://micro-{activeModule}.yigitpoyraz.io/remoteEntry.js
+        </span>
+        <div className="font-semibold text-stone-100 mb-1">
+          {activeModule === 'auth' && 'Kimlik Doğrulama Mikro Uygulaması Yüklendi (OAuth & JWT)'}
+          {activeModule === 'catalog' && 'Ürün & Portfolyo Listeleme Mikro Uygulaması Yüklendi'}
+          {activeModule === 'checkout' && 'Ödeme & Fatura İşlem Mikro Uygulaması Yüklendi'}
+        </div>
+        <p className="text-[11px] text-stone-400">
+          Ana uygulama yeniden derlenmeden bağımsız olarak güncellenebilir.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* --- 36. Cloud Firestore NoSQL Veritabanı --- */
+function CloudDbApp() {
+  const [docs, setDocs] = useState([
+    { id: 'usr-1', name: 'Yiğit Poyraz', role: 'Süper Admin', active: true },
+    { id: 'usr-2', name: 'Bugra', role: 'Yönetici', active: true }
+  ]);
+
+  return (
+    <div className="p-5 bg-stone-950/80 rounded-xl border border-red-950/60 max-w-md mx-auto text-xs">
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-bold text-stone-200">Cloud Firestore Koleksiyonu</span>
+        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+          Gerçek Zamanlı Senkronize
+        </span>
+      </div>
+      <div className="space-y-2 mb-3">
+        {docs.map(doc => (
+          <div key={doc.id} className="p-2.5 rounded bg-stone-900 border border-stone-800 flex justify-between items-center text-[11px]">
+            <div>
+              <strong className="text-amber-400 block">{doc.name}</strong>
+              <span className="text-stone-400 font-mono text-[10px]">{doc.id} · {doc.role}</span>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[10px] font-bold">
+              Aktif
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="text-[10px] text-stone-500 font-mono">
+        Kural Durumu: allow read: if true; allow write: if request.auth != null;
+      </div>
+    </div>
+  );
+}
+
+/* --- 37. Yapay Zeka & Doğal Dil İşleme Asistanı --- */
+function AiAssistantApp() {
+  const [prompt, setPrompt] = useState('Bu hafta için hangi modülü tavsiye edersin?');
+  const [response, setResponse] = useState('Hafta 38 için hazırlanan Büyük Final Projesini inceleyebilirsiniz. Tüm 38 haftalık tam yığın mimarisini tek bir şaheser halinde sunar.');
+
+  return (
+    <div className="p-5 bg-stone-950/80 rounded-xl border border-red-950/60 max-w-md mx-auto text-xs">
+      <div className="font-bold text-stone-200 mb-2">Gemini Model Akıl Yürütme Konsolu</div>
+      <div className="p-3 bg-stone-900 rounded border border-stone-800 text-stone-300 mb-3 text-[11px] leading-relaxed">
+        <span className="text-[10px] font-bold text-amber-400 block mb-1">Yanıt Akışı:</span>
+        {response}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          className="flex-1 px-3 py-1.5 bg-stone-900 rounded border border-stone-800 text-stone-200 text-xs focus:outline-none focus:border-amber-500"
+        />
+        <button
+          onClick={() => setResponse(`"${prompt}" sorgusu işlendi: Yiğit Poyraz mimarisi 38 haftalık tam yığın standardına göre optimize edilmiştir.`)}
+          className="px-3 py-1.5 bg-gradient-to-r from-red-700 to-amber-600 text-amber-100 font-bold rounded"
+        >
+          Çalıştır
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* --- 38. Hafta 38 Büyük Final Şaheseri --- */
+function GrandShowcaseApp() {
+  return (
+    <div className="p-6 bg-gradient-to-br from-red-950/90 via-stone-950 to-stone-900 rounded-xl border-2 border-amber-500/80 text-center text-stone-100 shadow-2xl">
+      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-tr from-amber-500 via-amber-300 to-yellow-200 p-0.5 flex items-center justify-center shadow-lg">
+        <div className="w-full h-full bg-stone-950 rounded-full flex items-center justify-center">
+          <ShieldCheck className="w-8 h-8 text-amber-400" />
+        </div>
+      </div>
+
+      <span className="text-xs uppercase tracking-widest text-amber-400 font-bold">
+        38 Haftalık Büyük Mühendislik Zirvesi
+      </span>
+      <h3 className="text-2xl font-black text-amber-100 mt-2 mb-2">
+        Yiğit Poyraz Tam Yığın Şaheseri
+      </h3>
+      <p className="text-xs text-stone-300 max-w-md mx-auto leading-relaxed mb-6">
+        38 hafta boyunca geliştirilen tüm modüller, canlı web servisleri, bulut Firestore veri senkronizasyonu ve kullanıcı yönetimi başarıyla tamamlanmıştır.
+      </p>
+
+      <div className="grid grid-cols-3 gap-3 max-w-md mx-auto text-xs mb-6">
+        <div className="p-3 bg-stone-900/80 rounded border border-red-900/60">
+          <span className="text-stone-400 block text-[10px]">Tamamlanan Hafta</span>
+          <strong className="text-amber-400 font-mono text-base">38 / 38</strong>
+        </div>
+        <div className="p-3 bg-stone-900/80 rounded border border-red-900/60">
+          <span className="text-stone-400 block text-[10px]">Toplam Modül</span>
+          <strong className="text-amber-400 font-mono text-base">38 Canlı Alan</strong>
+        </div>
+        <div className="p-3 bg-stone-900/80 rounded border border-red-900/60">
+          <span className="text-stone-400 block text-[10px]">Yönetici Hesabı</span>
+          <strong className="text-emerald-400 font-mono text-base">Bugra</strong>
+        </div>
+      </div>
+
+      <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-700 via-red-800 to-amber-600 text-amber-100 font-bold rounded-lg text-xs shadow-lg shadow-red-950/80">
+        <Zap className="w-4 h-4 text-amber-300" />
+        Yiğit Poyraz 38 Haftalık Ekosistemi Tamamlandı
+      </div>
+    </div>
+  );
+}
+

@@ -61,7 +61,7 @@ export const BatchLinkManagerModal: React.FC<BatchLinkManagerModalProps> = ({
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(editedApps, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `yigit_poyraz_30_hafta_linkleri.json`);
+    downloadAnchor.setAttribute("download", `yigit_poyraz_38_hafta_linkleri.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -84,7 +84,7 @@ export const BatchLinkManagerModal: React.FC<BatchLinkManagerModalProps> = ({
           <div>
             <h2 className="text-lg font-bold text-stone-100 flex items-center gap-2">
               <Link2 className="w-5 h-5 text-amber-400" />
-              30 Haftalık Toplu Proje Linki Yöneticisi
+              38 Haftalık Toplu Proje Linki Yöneticisi
             </h2>
             <p className="text-xs text-stone-400 mt-1">
               Kendi projelerinizin canlı adreslerini ve GitHub linklerini bu ekrandan topluca girebilirsiniz.
@@ -113,12 +113,12 @@ export const BatchLinkManagerModal: React.FC<BatchLinkManagerModalProps> = ({
         <div className="px-5 py-3 bg-stone-900/50 border-b border-stone-800 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
             <span className="text-stone-400">
-              Tanımlanan Proje Linki: <strong className="text-amber-400 font-mono text-sm">{filledCount} / 30</strong>
+              Tanımlanan Proje Linki: <strong className="text-amber-400 font-mono text-sm">{filledCount} / {apps.length}</strong>
             </span>
             <div className="w-24 sm:w-36 h-2 bg-stone-900 rounded-full overflow-hidden border border-red-950/80">
               <div 
                 className="h-full bg-gradient-to-r from-red-600 to-amber-500 transition-all duration-300"
-                style={{ width: `${(filledCount / 30) * 100}%` }}
+                style={{ width: `${(filledCount / apps.length) * 100}%` }}
               />
             </div>
           </div>
@@ -130,7 +130,7 @@ export const BatchLinkManagerModal: React.FC<BatchLinkManagerModalProps> = ({
                 filterFilled === 'all' ? 'bg-amber-500 text-stone-950 font-bold' : 'text-stone-400 hover:text-stone-200'
               }`}
             >
-              Tümü (30)
+              Tümü ({apps.length})
             </button>
             <button
               onClick={() => setFilterFilled('empty')}
@@ -138,7 +138,7 @@ export const BatchLinkManagerModal: React.FC<BatchLinkManagerModalProps> = ({
                 filterFilled === 'empty' ? 'bg-amber-500 text-stone-950 font-bold' : 'text-stone-400 hover:text-stone-200'
               }`}
             >
-              Boş Olanlar ({30 - filledCount})
+              Boş Olanlar ({apps.length - filledCount})
             </button>
             <button
               onClick={() => setFilterFilled('filled')}

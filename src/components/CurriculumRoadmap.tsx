@@ -24,11 +24,18 @@ export const CurriculumRoadmap: React.FC<Props> = ({ apps, onLaunch }) => {
       color: 'from-stone-900 to-amber-950/40'
     },
     {
-      title: 'Aşama 3: İleri Seviye Sistemler, Web Audio & Final Vitrini',
+      title: 'Aşama 3: İleri Seviye Sistemler & Ses Laboratuvarı',
       weeks: 'Hafta 21 – 30',
-      description: 'Web Audio API sentezleyicisi, terminal emülatörü, beslenme hesabı ve tam yığın portfolyosu.',
+      description: 'Web Audio API sentezleyicisi, terminal emülatörü, fatura motoru ve beslenme analizi.',
       apps: apps.slice(20, 30),
       color: 'from-red-950/60 to-amber-900/40'
+    },
+    {
+      title: 'Aşama 4: Bulut, Yapay Zeka & Büyük Final',
+      weeks: 'Hafta 31 – 38',
+      description: 'WebSockets, PWA, Cloud Firestore veritabanı, AI asistanı ve 38 haftalık büyük şaheser.',
+      apps: apps.slice(30, 38),
+      color: 'from-amber-950/50 to-red-950/80'
     }
   ];
 
@@ -44,42 +51,42 @@ export const CurriculumRoadmap: React.FC<Props> = ({ apps, onLaunch }) => {
               </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-100">
-              30 Haftalık Geliştirici Yol Haritası
+              38 Haftalık Geliştirici Yol Haritası
             </h2>
           </div>
           <p className="text-xs text-stone-400 max-w-md">
-            Yiğit Poyraz tarafından kurgulanan 3 ana aşamalı mühendislik programında her hafta bir öncekinin temelleri üzerine inşa edilir.
+            Yiğit Poyraz tarafından kurgulanan 4 ana aşamalı mühendislik programında her hafta bir öncekinin temelleri üzerine inşa edilir.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {phases.map((phase, idx) => (
             <div 
               key={idx}
-              className="p-6 rounded-2xl bg-gradient-to-b from-stone-900/90 to-stone-950 border border-red-950/80 flex flex-col justify-between shadow-lg"
+              className="p-5 rounded-2xl bg-gradient-to-b from-stone-900/90 to-stone-950 border border-red-950/80 flex flex-col justify-between shadow-lg"
             >
               <div>
                 <div className="flex items-center justify-between text-xs mb-3">
                   <span className="font-mono font-bold text-amber-400">{phase.weeks}</span>
-                  <span className="text-[11px] text-stone-500 font-mono">10 Uygulama</span>
+                  <span className="text-[11px] text-stone-500 font-mono">{phase.apps.length} Uygulama</span>
                 </div>
 
-                <h3 className="text-base font-bold text-stone-100 mb-2">
+                <h3 className="text-sm font-bold text-stone-100 mb-2">
                   {phase.title}
                 </h3>
-                <p className="text-xs text-stone-400 leading-relaxed mb-6">
+                <p className="text-xs text-stone-400 leading-relaxed mb-4">
                   {phase.description}
                 </p>
 
-                <div className="space-y-2 border-t border-stone-800/80 pt-4">
+                <div className="space-y-1.5 border-t border-stone-800/80 pt-3">
                   {phase.apps.map((app) => (
                     <button
                       key={app.id}
                       onClick={() => onLaunch(app)}
                       className="w-full text-left p-2 rounded-lg bg-stone-950/80 hover:bg-stone-900 border border-stone-900 hover:border-amber-500/40 flex items-center justify-between group transition-all"
                     >
-                      <div className="flex items-center gap-2.5 truncate pr-2">
-                        <span className="text-[11px] font-mono text-amber-500/80 shrink-0 font-bold">
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <span className="text-[10px] font-mono text-amber-500/80 shrink-0 font-bold">
                           {app.weekLabel}
                         </span>
                         <span className="text-xs text-stone-300 group-hover:text-amber-300 truncate">

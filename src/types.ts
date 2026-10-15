@@ -23,37 +23,7 @@ export interface WeeklyApp {
   longDescription: string;
   techStack: string[];
   difficulty: 'Temel' | 'Orta' | 'İleri';
-  appType: 
-    | 'pomodoro'
-    | 'markdown'
-    | 'crypto_converter'
-    | 'password_generator'
-    | 'weather_sim'
-    | 'kanban'
-    | 'color_palette'
-    | 'wpm_test'
-    | 'expense_tracker'
-    | 'drawing_canvas'
-    | 'qr_generator'
-    | 'memory_game'
-    | 'habit_tracker'
-    | 'json_formatter'
-    | 'world_clocks'
-    | 'gradient_studio'
-    | 'regex_tester'
-    | 'tts_player'
-    | 'crypto_hash'
-    | 'snake_game'
-    | 'invoice_generator'
-    | 'unit_converter'
-    | 'flashcards'
-    | 'ambient_audio'
-    | 'git_simulator'
-    | 'calorie_calculator'
-    | 'countdown_timer'
-    | 'bookmark_vault'
-    | 'tone_synth'
-    | 'final_showcase';
+  appType: string;
   learningOutcomes: string[];
   estimatedTime: string;
   accentColor?: string;

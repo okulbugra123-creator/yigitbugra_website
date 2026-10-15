@@ -1,9 +1,12 @@
 import React from 'react';
-import { Sparkles, Layers, Code2, Award, ExternalLink } from 'lucide-react';
+import { Sparkles, Layers, Code2, ShieldCheck, Lock, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   onRandomLaunch: () => void;
   onOpenBatchManager: () => void;
+  onOpenAdminLogin: () => void;
+  onAdminLogout: () => void;
+  isAdmin: boolean;
   activeCount: number;
   customLinksCount: number;
 }
@@ -11,11 +14,14 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ 
   onRandomLaunch, 
   onOpenBatchManager, 
+  onOpenAdminLogin,
+  onAdminLogout,
+  isAdmin,
   activeCount, 
   customLinksCount 
 }) => {
   return (
-    <header className="sticky top-0 z-30 w-full backdrop-blur-md bg-stone-950/85 border-b border-red-950/80 transition-colors">
+    <header className="sticky top-0 z-30 w-full backdrop-blur-md bg-stone-950/90 border-b border-red-950/80 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-6">
         
         {/* Zone 1: Logo & Brand Lockup (Sol Üst Y.P Logosu & Yiğit Poyraz) */}
@@ -34,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
                 Yiğit Poyraz
               </span>
               <span className="text-[11px] font-medium tracking-wide text-amber-500/90 uppercase whitespace-nowrap">
-                30 Haftalık Uygulama Portalı
+                38 Haftalık Uygulama Portalı
               </span>
             </div>
           </a>
@@ -54,19 +60,44 @@ export const Header: React.FC<HeaderProps> = ({
             className="hover:text-amber-400 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5"
           >
             <Code2 className="w-3.5 h-3.5 text-amber-500" />
-            30 Haftalık Plan
+            38 Haftalık Plan
           </a>
         </nav>
 
-        {/* Zone 3: Primary Actions */}
+        {/* Zone 3: Primary Actions (Admin Controls & Launch) */}
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* Admin Status / Login Button */}
+          {isAdmin ? (
+            <div className="flex items-center gap-1.5 bg-stone-900 border border-emerald-500/60 p-1 pl-2.5 rounded-lg text-xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="font-bold text-emerald-300">Bugra (Yönetici)</span>
+              <button
+                onClick={onAdminLogout}
+                className="p-1 hover:text-red-400 text-stone-400 rounded transition-colors ml-1"
+                title="Yönetici Çıkışı Yap"
+              >
+                <LogOut className="w-3 h-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenAdminLogin}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-stone-900 hover:bg-stone-800 border border-stone-800 hover:border-amber-500/50 text-stone-300 hover:text-amber-300 rounded-lg text-xs font-medium transition-all"
+              title="Admin Girişi (Bugra)"
+            >
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Yönetici Girişi</span>
+            </button>
+          )}
+
+          {/* Batch Links Manager Button */}
           <button
             onClick={onOpenBatchManager}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-900 hover:bg-stone-800 border border-amber-500/50 hover:border-amber-400 text-amber-400 rounded-lg text-xs font-bold transition-all whitespace-nowrap shrink-0"
-            title="Tüm 30 Haftanın Linklerini Düzenle"
+            title="Tüm 38 Haftanın Linklerini Düzenle"
           >
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span>Linkleri Yönet ({customLinksCount}/30)</span>
+            <span>Linkleri Yönet ({customLinksCount}/38)</span>
           </button>
           
           <button

@@ -8,8 +8,8 @@ interface HeroProps {
   selectedCategory: CategoryType;
   onSelectCategory: (cat: CategoryType) => void;
   categories: CategoryType[];
-  selectedRange: 'all' | '1-10' | '11-20' | '21-30';
-  onSelectRange: (range: 'all' | '1-10' | '11-20' | '21-30') => void;
+  selectedRange: 'all' | '1-10' | '11-20' | '21-30' | '31-38';
+  onSelectRange: (range: 'all' | '1-10' | '11-20' | '21-30' | '31-38') => void;
   showFavoritesOnly: boolean;
   onToggleFavoritesOnly: () => void;
   favoritesCount: number;
@@ -55,10 +55,10 @@ export const Hero: React.FC<HeroProps> = ({
         {/* Main Hero Headline */}
         <div className="max-w-3xl mb-6">
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-stone-100 leading-[1.15]" style={{ textWrap: 'balance' }}>
-            30 Haftalık Modern Web Uygulamaları ve Kod Ekosistemi
+            38 Haftalık Modern Web Uygulamaları ve Kod Ekosistemi
           </h1>
           <p className="mt-4 text-sm sm:text-base text-stone-300 leading-relaxed max-w-2xl">
-            Yiğit Poyraz tarafından her hafta için özel olarak kurgulanan 30 fonksiyonel web uygulaması.
+            Yiğit Poyraz tarafından her hafta için özel olarak kurgulanan 38 fonksiyonel web uygulaması.
             Koyu kırmızı ve asil sarı temasıyla tasarlanan bu arayüzde dilediğiniz haftayı başlatabilir ve anında deneyimleyebilirsiniz.
           </p>
         </div>
@@ -68,7 +68,7 @@ export const Hero: React.FC<HeroProps> = ({
           <div className="p-3.5 rounded-xl bg-stone-900/60 border border-red-950/80">
             <span className="text-[11px] text-stone-400 block font-medium">Toplam Hafta</span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-2xl font-mono font-bold text-amber-400">30</span>
+              <span className="text-2xl font-mono font-bold text-amber-400">38</span>
               <span className="text-xs text-stone-400 font-medium">Hafta</span>
             </div>
           </div>
@@ -76,13 +76,13 @@ export const Hero: React.FC<HeroProps> = ({
             <span className="text-[11px] text-stone-400 block font-medium">Kendi Proje Linkleriniz</span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="text-2xl font-mono font-bold text-emerald-400">{customLinksCount}</span>
-              <span className="text-xs text-stone-400 font-medium">/ 30 Ekli</span>
+              <span className="text-xs text-stone-400 font-medium">/ 38 Ekli</span>
             </div>
           </div>
           <div className="p-3.5 rounded-xl bg-stone-900/60 border border-red-950/80">
             <span className="text-[11px] text-stone-400 block font-medium">Boş Bekleyen</span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-2xl font-mono font-bold text-stone-400">{30 - customLinksCount}</span>
+              <span className="text-2xl font-mono font-bold text-stone-400">{38 - customLinksCount}</span>
               <span className="text-xs text-stone-400 font-medium">Proje Alanı</span>
             </div>
           </div>
@@ -108,7 +108,7 @@ export const Hero: React.FC<HeroProps> = ({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Uygulama adı, hafta (örn: Hafta 01) veya teknoloji ara..."
+                placeholder="Uygulama adı, hafta (örn: Hafta 01 veya Hafta 38) veya teknoloji ara..."
                 className="w-full pl-10 pr-4 py-2.5 bg-stone-900/90 rounded-lg border border-red-950/80 text-xs text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-500/80 focus:ring-1 focus:ring-amber-500/40 transition-all font-medium"
               />
               {searchQuery && (
@@ -125,7 +125,7 @@ export const Hero: React.FC<HeroProps> = ({
             <div className="flex items-center gap-2">
               {/* Range Tabs */}
               <div className="flex items-center gap-1 p-1 bg-stone-900 rounded-lg border border-red-950/80 text-xs">
-                {(['all', '1-10', '11-20', '21-30'] as const).map((r) => {
+                {(['all', '1-10', '11-20', '21-30', '31-38'] as const).map((r) => {
                   const label = r === 'all' ? 'Tümü' : `${r}. Hafta`;
                   const active = selectedRange === r;
                   return (

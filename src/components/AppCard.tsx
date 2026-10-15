@@ -12,6 +12,8 @@ interface AppCardProps {
   onQuickSaveUrl?: (appId: number, url: string) => void;
   isFavorite: boolean;
   onToggleFavorite: (id: number) => void;
+  isAdmin?: boolean;
+  onRequireAdmin?: () => void;
 }
 
 export const AppCard: React.FC<AppCardProps> = ({
@@ -20,7 +22,9 @@ export const AppCard: React.FC<AppCardProps> = ({
   onEdit,
   onQuickSaveUrl,
   isFavorite,
-  onToggleFavorite
+  onToggleFavorite,
+  isAdmin = false,
+  onRequireAdmin
 }) => {
   const [isEditingInline, setIsEditingInline] = useState(false);
   const [inlineUrl, setInlineUrl] = useState(app.projectUrl || '');
@@ -28,12 +32,20 @@ export const AppCard: React.FC<AppCardProps> = ({
 
   const hasLink = Boolean(app.projectUrl && app.projectUrl.trim() !== '');
 
+  const handleStartEdit = () => {
+    if (!isAdmin && onRequireAdmin) {
+      onRequireAdmin();
+      return;
+    }
+    setIsEditingInline(true);
+  };
+
   const handleOpenProject = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (hasLink) {
       window.open(app.projectUrl, '_blank', 'noopener,noreferrer');
     } else {
-      setIsEditingInline(true);
+      handleStartEdit();
     }
   };
 
@@ -70,9 +82,15 @@ export const AppCard: React.FC<AppCardProps> = ({
 
           <div className="flex items-center gap-1">
             <button
-              onClick={() => onEdit(app)}
+              onClick={() => {
+                if (!isAdmin && onRequireAdmin) {
+                  onRequireAdmin();
+                  return;
+                }
+                onEdit(app);
+              }}
               className="p-1.5 rounded-lg text-stone-500 hover:text-amber-300 hover:bg-stone-800/60 transition-colors"
-              title="Ayrıntılı Düzenle (Başlık, Açıklama, GitHub)"
+              title={isAdmin ? "Ayrıntılı Düzenle (Başlık, Açıklama, GitHub)" : "Düzenlemek için Yönetici Girişi Yapın"}
             >
               <Edit3 className="w-3.5 h-3.5" />
             </button>
@@ -136,8 +154,8 @@ export const AppCard: React.FC<AppCardProps> = ({
             <div className="flex items-center justify-between gap-2 text-[11px]">
               <div 
                 className="flex items-center gap-1.5 truncate cursor-pointer"
-                onClick={() => setIsEditingInline(true)}
-                title="Tıklayarak linki hızlıca değiştirin"
+                onClick={handleStartEdit}
+                title={isAdmin ? "Tıklayarak linki hızlıca değiştirin" : "Düzenlemek için Yönetici Girişi Yapın"}
               >
                 {hasLink ? (
                   <>
@@ -150,7 +168,7 @@ export const AppCard: React.FC<AppCardProps> = ({
                   <>
                     <CircleDashed className="w-3.5 h-3.5 text-stone-500 shrink-0" />
                     <span className="text-stone-500 italic hover:text-stone-400">
-                      Link henüz eklenmedi (Tıkla ve yapıştır)
+                      Link henüz eklenmedi {isAdmin ? '(Tıkla ve yapıştır)' : '(Yönetici Girişi Yap)'}
                     </span>
                   </>
                 )}
@@ -171,7 +189,7 @@ export const AppCard: React.FC<AppCardProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={() => setIsEditingInline(true)}
+                  onClick={handleStartEdit}
                   className="text-amber-400 hover:text-amber-300 text-[10px] font-semibold underline"
                 >
                   {hasLink ? 'Değiştir' : '+ Link Ekle'}
@@ -220,8 +238,8 @@ export const AppCard: React.FC<AppCardProps> = ({
           </button>
         ) : (
           <button
-            onClick={() => setIsEditingInline(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-amber-400 hover:text-amber-300 border border-amber-500/40 text-xs font-semibold transition-all duration-200 active:scale-95"
+            onClick={handleStartEdit}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-amber-400 hover:text-amber-300 border border-amber-500/40 text-xs font-semibold transition-all duration-200 active:scale-95"
           >
             <Plus className="w-3 h-3 text-amber-400" />
             <span>Kendi Linkini Koy</span>

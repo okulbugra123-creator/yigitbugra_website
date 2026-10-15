@@ -34,11 +34,11 @@ app.get('/api/projects', (_req, res) => {
 app.post('/api/projects', (req, res) => {
   try {
     const { projects } = req.body;
-    if (Array.isArray(projects) && projects.length === 30) {
+    if (Array.isArray(projects) && projects.length >= 1) {
       fs.writeFileSync(DATA_FILE, JSON.stringify(projects, null, 2), 'utf-8');
       return res.json({ success: true, count: projects.length });
     }
-    return res.status(400).json({ error: '30 adet haftalık proje dizisi bekleniyor.' });
+    return res.status(400).json({ error: 'Haftalık proje dizisi bekleniyor.' });
   } catch (err) {
     console.error('Error writing projects_data.json:', err);
     return res.status(500).json({ error: 'Proje verileri kaydedilemedi.' });

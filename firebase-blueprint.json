@@ -11,7 +11,7 @@
         },
         "weekNumber": {
           "type": "number",
-          "description": "Hafta numarası (1-30)"
+          "description": "Hafta numarası (1-38)"
         },
         "weekLabel": {
           "type": "string",
@@ -56,7 +56,7 @@
       "schema": {
         "$ref": "#/entities/WeeklyProject"
       },
-      "description": "30 haftanın tüm cihazlardan erişilebilir proje ve link kayıtları"
+      "description": "38 haftanın tüm cihazlardan erişilebilir proje ve link kayıtları"
     }
   }
 }

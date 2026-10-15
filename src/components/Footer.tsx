@@ -14,13 +14,13 @@ export const Footer: React.FC = () => {
             </div>
             <div>
               <span className="text-sm font-bold text-stone-100 block">Yiğit Poyraz</span>
-              <span className="text-[11px] text-amber-500/80 font-mono">30 Haftalık Web Uygulama Portalı</span>
+              <span className="text-[11px] text-amber-500/80 font-mono">38 Haftalık Web Uygulama Portalı</span>
             </div>
           </div>
 
           {/* Quick Info & Links */}
           <div className="flex flex-wrap items-center gap-6 text-xs text-stone-400">
-            <span>30 Hafta / 30 Canlı Uygulama</span>
+            <span>38 Hafta / 38 Canlı Proje Alanı</span>
             <span className="text-stone-700" aria-hidden="true">·</span>
             <span>Koyu Kırmızı & Altın Sarı Paleti</span>
             <span className="text-stone-700" aria-hidden="true">·</span>
