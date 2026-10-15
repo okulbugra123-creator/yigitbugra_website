@@ -48,6 +48,52 @@ export default function App() {
     }
   });
 
+  // Cross-device server sync function
+  const syncToServer = async (projectsList: WeeklyApp[]) => {
+    try {
+      await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projects: projectsList })
+      });
+    } catch (err) {
+      console.warn('Sunucu senkronizasyon hatası:', err);
+    }
+  };
+
+  // On mount, fetch server projects so other devices see the saved links
+  useEffect(() => {
+    const fetchServerProjects = async () => {
+      try {
+        const res = await fetch('/api/projects');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.projects) && data.projects.length === 30) {
+            setApps(data.projects);
+            try {
+              localStorage.setItem('yp_custom_projects_data', JSON.stringify(data.projects));
+            } catch {}
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Sunucu verisi alınamadı, yerel depolama devrede:', err);
+      }
+
+      // If server was empty but local has links, sync local to server so other devices can access them
+      try {
+        const localSaved = localStorage.getItem('yp_custom_projects_data');
+        if (localSaved) {
+          const parsed = JSON.parse(localSaved);
+          if (Array.isArray(parsed) && parsed.length === 30 && parsed.some((p: WeeklyApp) => p.projectUrl)) {
+            syncToServer(parsed);
+          }
+        }
+      } catch {}
+    };
+    fetchServerProjects();
+  }, []);
+
   // Save apps whenever updated
   useEffect(() => {
     try {
@@ -55,6 +101,22 @@ export default function App() {
     } catch {
       // ignore
     }
+  }, [apps]);
+
+  // Ensure persistence when the tab/window is closed
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      try {
+        localStorage.setItem('yp_custom_projects_data', JSON.stringify(apps));
+        // Use sendBeacon for guaranteed sync on close if supported
+        const blob = new Blob([JSON.stringify({ projects: apps })], { type: 'application/json' });
+        navigator.sendBeacon?.('/api/projects', blob);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [apps]);
 
   // Save favorites to localStorage
@@ -71,25 +133,59 @@ export default function App() {
     return apps.filter(a => a.projectUrl && a.projectUrl.trim() !== '').length;
   }, [apps]);
 
-  // Handle single app save
+  // Handle single app save with immediate direct localStorage flush and server sync
   const handleSaveApp = (updatedApp: WeeklyApp) => {
-    setApps(prev => prev.map(a => a.id === updatedApp.id ? updatedApp : a));
+    const nextApps = apps.map(a => a.id === updatedApp.id ? updatedApp : a);
+    setApps(nextApps);
+    try {
+      localStorage.setItem('yp_custom_projects_data', JSON.stringify(nextApps));
+    } catch {}
+    syncToServer(nextApps);
     if (selectedApp && selectedApp.id === updatedApp.id) {
       setSelectedApp(updatedApp);
     }
   };
 
+  // Quick save URL directly from the card
+  const handleQuickSaveUrl = (appId: number, url: string) => {
+    const nextApps = apps.map(a => {
+      if (a.id !== appId) return a;
+      return {
+        ...a,
+        projectUrl: url.trim(),
+        status: url.trim() ? ('Yayında' as const) : ('Boş (Proje Bekleniyor)' as const)
+      };
+    });
+    setApps(nextApps);
+    try {
+      localStorage.setItem('yp_custom_projects_data', JSON.stringify(nextApps));
+    } catch {}
+    syncToServer(nextApps);
+    if (selectedApp && selectedApp.id === appId) {
+      setSelectedApp(prev => prev ? {
+        ...prev,
+        projectUrl: url.trim(),
+        status: url.trim() ? 'Yayında' : 'Boş (Proje Bekleniyor)'
+      } : null);
+    }
+  };
+
   // Handle clear link
   const handleClearLink = (appId: number) => {
-    setApps(prev => prev.map(a => {
+    const nextApps = apps.map(a => {
       if (a.id !== appId) return a;
       return {
         ...a,
         projectUrl: '',
         githubUrl: '',
-        status: 'Boş (Proje Bekleniyor)'
+        status: 'Boş (Proje Bekleniyor)' as const
       };
-    }));
+    });
+    setApps(nextApps);
+    try {
+      localStorage.setItem('yp_custom_projects_data', JSON.stringify(nextApps));
+    } catch {}
+    syncToServer(nextApps);
     if (selectedApp && selectedApp.id === appId) {
       setSelectedApp(prev => prev ? {
         ...prev,
@@ -100,9 +196,13 @@ export default function App() {
     }
   };
 
-  // Handle batch save
+  // Handle batch save across all devices
   const handleSaveAllApps = (updatedList: WeeklyApp[]) => {
     setApps(updatedList);
+    try {
+      localStorage.setItem('yp_custom_projects_data', JSON.stringify(updatedList));
+    } catch {}
+    syncToServer(updatedList);
     if (selectedApp) {
       const found = updatedList.find(a => a.id === selectedApp.id);
       if (found) setSelectedApp(found);
@@ -190,7 +290,7 @@ export default function App() {
         
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-red-950/70 gap-3">
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <Layers className="w-4 h-4 text-amber-500" />
             <h2 className="text-lg font-bold text-stone-100">
               30 Haftalık Uygulama Koleksiyonu
@@ -198,8 +298,9 @@ export default function App() {
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-stone-900 border border-red-950/80 text-amber-400 font-bold">
               {filteredApps.length} / 30
             </span>
-            <span className="text-xs text-stone-400 font-mono hidden md:inline">
-              ({customLinksCount} Kendi Proje Linkiniz Ekli)
+            <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Tüm Cihazlarla Eşitlendi (Farklı cihazlardan girseniz de görünür)
             </span>
           </div>
 
@@ -209,7 +310,7 @@ export default function App() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 border border-amber-500/50 text-amber-400 text-xs font-semibold transition-colors"
             >
               <Link2 className="w-3.5 h-3.5" />
-              <span>Toplu Link Girişi</span>
+              <span>Toplu Link Girişi & Yedekleme</span>
             </button>
           </div>
         </div>
@@ -246,6 +347,7 @@ export default function App() {
                 app={app}
                 onLaunch={(clickedApp) => setSelectedApp(clickedApp)}
                 onEdit={(clickedApp) => setEditingApp(clickedApp)}
+                onQuickSaveUrl={handleQuickSaveUrl}
                 isFavorite={favorites.includes(app.id)}
                 onToggleFavorite={handleToggleFavorite}
               />
