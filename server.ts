@@ -33,6 +33,10 @@ app.get('/api/projects', (_req, res) => {
 // POST to update weekly projects on server storage (Synced across all devices)
 app.post('/api/projects', (req, res) => {
   try {
+    const adminRole = req.headers['x-admin-role'];
+    if (adminRole !== 'Bugra') {
+      return res.status(403).json({ error: 'Yetkisiz işlem: Sitede değişiklik sadece yönetici (Bugra) tarafından yapılabilir.' });
+    }
     const { projects } = req.body;
     if (Array.isArray(projects) && projects.length >= 1) {
       fs.writeFileSync(DATA_FILE, JSON.stringify(projects, null, 2), 'utf-8');

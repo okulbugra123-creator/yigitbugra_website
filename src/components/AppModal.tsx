@@ -3,7 +3,8 @@ import { WeeklyApp } from '../types';
 import { InteractiveAppRunner } from './InteractiveAppRunner';
 import { 
   X, ExternalLink, Star, ChevronLeft, ChevronRight, 
-  Terminal, BookOpen, Cpu, Check, Share2, Edit3, Link2, Plus, Github
+  Terminal, BookOpen, Cpu, Check, Share2, Edit3, Link2, Plus, Github,
+  Lock, Copy
 } from 'lucide-react';
 
 interface AppModalProps {
@@ -14,6 +15,8 @@ interface AppModalProps {
   allApps: WeeklyApp[];
   isFavorite: boolean;
   onToggleFavorite: (id: number) => void;
+  isAdmin?: boolean;
+  onRequireAdmin?: (reason?: string) => void;
 }
 
 export const AppModal: React.FC<AppModalProps> = ({
@@ -23,7 +26,9 @@ export const AppModal: React.FC<AppModalProps> = ({
   onEditApp,
   allApps,
   isFavorite,
-  onToggleFavorite
+  onToggleFavorite,
+  isAdmin = false,
+  onRequireAdmin
 }) => {
   const [activeTab, setActiveTab] = useState<'app' | 'architecture' | 'outcomes'>('app');
   const [copiedLink, setCopiedLink] = useState(false);
@@ -47,10 +52,22 @@ export const AppModal: React.FC<AppModalProps> = ({
   const nextApp = currentIndex < allApps.length - 1 ? allApps[currentIndex + 1] : null;
 
   const handleShare = () => {
+    if (!isAdmin) {
+      onRequireAdmin?.('Bağlantı kopyalama işlemi sadece Bugra (Yönetici) tarafından yapılabilir.');
+      return;
+    }
     const url = app.projectUrl || `${window.location.origin}#week-${app.weekNumber}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleTriggerEdit = () => {
+    if (!isAdmin) {
+      onRequireAdmin?.('Sitede değişiklik yapma ve link ekleme/düzenleme yetkisi sadece Bugra (Yönetici) hesabına aittir.');
+      return;
+    }
+    onEditApp(app);
   };
 
   const hasLink = Boolean(app.projectUrl && app.projectUrl.trim() !== '');
@@ -89,17 +106,17 @@ export const AppModal: React.FC<AppModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onEditApp(app)}
+              onClick={handleTriggerEdit}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 border border-amber-500/50 text-amber-400 text-xs font-semibold transition-colors"
-              title="Kendi Proje Linkinizi Ekleyin / Düzenleyin"
+              title={isAdmin ? "Proje Linkinizi Ekleyin / Düzenleyin" : "Düzenlemek için Yönetici Girişi Yapın"}
             >
-              <Edit3 className="w-3.5 h-3.5" />
+              {!isAdmin ? <Lock className="w-3.5 h-3.5 text-amber-500/80" /> : <Edit3 className="w-3.5 h-3.5" />}
               <span>{hasLink ? 'Linki Düzenle' : 'Kendi Linkini Koy'}</span>
             </button>
             <button
               onClick={handleShare}
               className="p-2 rounded-lg bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-400 hover:text-amber-400 transition-colors"
-              title="Bağlantıyı Kopyala"
+              title={isAdmin ? "Bağlantıyı Kopyala" : "Bağlantıyı Kopyala (Sadece Yönetici)"}
             >
               {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
             </button>
@@ -125,16 +142,35 @@ export const AppModal: React.FC<AppModalProps> = ({
         </div>
 
         {/* Custom Project Link Alert Banner */}
-        <div className="px-5 py-3 bg-stone-900/90 border-b border-red-950/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div 
+          className="px-5 py-3 bg-stone-900/90 border-b border-red-950/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+          onCopy={(e) => {
+            if (!isAdmin) {
+              e.preventDefault();
+              onRequireAdmin?.('Link kopyalama işlemi sadece Bugra (Yönetici) tarafından yapılabilir.');
+            }
+          }}
+        >
           <div className="flex items-center gap-2">
             <Link2 className="w-4 h-4 text-amber-400 shrink-0" />
             {hasLink ? (
-              <span className="text-stone-300">
-                Canlı Proje Adresi: <strong className="text-amber-400 font-mono ml-1">{app.projectUrl}</strong>
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-stone-300">
+                  Canlı Proje Adresi: 
+                  <strong className="text-amber-400 font-mono ml-1 select-none">
+                    {app.projectUrl}
+                  </strong>
+                </span>
+                {!isAdmin && (
+                  <span className="px-2 py-0.5 rounded bg-amber-950/50 text-amber-400 border border-amber-800/40 font-mono text-[10px] flex items-center gap-1">
+                    <Lock className="w-2.5 h-2.5" />
+                    Kopyalama & Değiştirme Korumalı
+                  </span>
+                )}
+              </div>
             ) : (
               <span className="text-stone-400 italic">
-                Bu haftanın bağlantısı henüz boş. Kendi projenizin adresini ekleyebilirsiniz.
+                Bu haftanın bağlantısı henüz boş. {isAdmin ? 'Kendi projenizin adresini ekleyebilirsiniz.' : 'Yönetici tarafından proje linki bekleniyor.'}
               </span>
             )}
           </div>
@@ -152,22 +188,33 @@ export const AppModal: React.FC<AppModalProps> = ({
               </a>
             )}
             {hasLink ? (
-              <a
-                href={app.projectUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gradient-to-r from-red-700 to-amber-600 text-amber-100 font-bold hover:opacity-90"
-              >
-                <span>Projeyi Yeni Sekmede Aç</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <button
+                    onClick={handleShare}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs font-semibold"
+                  >
+                    <Copy className="w-3 h-3 text-amber-400" />
+                    <span>Linki Kopyala</span>
+                  </button>
+                )}
+                <a
+                  href={app.projectUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-gradient-to-r from-red-700 to-amber-600 text-amber-100 font-bold hover:opacity-90"
+                >
+                  <span>Projeyi Yeni Sekmede Aç</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
             ) : (
               <button
-                onClick={() => onEditApp(app)}
+                onClick={handleTriggerEdit}
                 className="flex items-center gap-1 px-3 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold"
               >
-                <Plus className="w-3.5 h-3.5" />
-                Kendi Linkimi Ekle
+                {!isAdmin ? <Lock className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {isAdmin ? 'Kendi Linkimi Ekle' : 'Link Ekle (Yönetici)'}
               </button>
             )}
           </div>

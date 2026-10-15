@@ -11,7 +11,7 @@ import { CurriculumRoadmap } from './components/CurriculumRoadmap';
 import { ClockWidget } from './components/ClockWidget';
 import { Footer } from './components/Footer';
 import { AdminLoginModal } from './components/AdminLoginModal';
-import { Layers, Sparkles, AlertCircle, Link2, Plus, Globe, ShieldCheck } from 'lucide-react';
+import { Layers, Sparkles, AlertCircle, Link2, Plus, Globe, ShieldCheck, Lock } from 'lucide-react';
 import { 
   saveProjectToFirestore, 
   saveAllProjectsToFirestore, 
@@ -58,6 +58,7 @@ export default function App() {
     }
   });
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [adminLoginReason, setAdminLoginReason] = useState<string | null>(null);
 
   // 38 Weekly Apps state, synchronized with localStorage & Firestore
   const [apps, setApps] = useState<WeeklyApp[]>(() => {
@@ -94,6 +95,12 @@ export default function App() {
     }
   });
 
+  // Open admin login with custom reason
+  const handleOpenAdminLogin = (reason?: string) => {
+    setAdminLoginReason(reason || 'Sitede olan herhangi bir değişiklik veya link kopyalama/yapıştırma sadece Bugra (Yönetici) tarafından yapılabilir.');
+    setIsAdminLoginOpen(true);
+  };
+
   // Admin login success
   const handleLoginSuccess = () => {
     setIsAdmin(true);
@@ -111,20 +118,24 @@ export default function App() {
   };
 
   // Guard for admin-only actions
-  const requireAdmin = (action: () => void) => {
+  const requireAdmin = (action: () => void, customReason?: string) => {
     if (isAdmin) {
       action();
     } else {
-      setIsAdminLoginOpen(true);
+      handleOpenAdminLogin(customReason);
     }
   };
 
-  // Cross-device server sync fallback
+  // Cross-device server sync fallback (protected by admin header)
   const syncToServer = async (projectsList: WeeklyApp[]) => {
+    if (!isAdmin) return; // Only admin can push modifications to server
     try {
       await fetch('/api/projects', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-role': 'Bugra'
+        },
         body: JSON.stringify({ projects: projectsList })
       });
     } catch {
@@ -145,7 +156,7 @@ export default function App() {
       }
     });
 
-    // 2. Fetch initial cloud data or seed if cloud is empty
+    // 2. Fetch initial cloud data
     fetchProjectsFromFirestore().then((cloudData) => {
       if (cloudData && cloudData.length > 0) {
         const merged = mergeProjects(cloudData);
@@ -153,21 +164,6 @@ export default function App() {
         try {
           localStorage.setItem('yp_custom_projects_data', JSON.stringify(merged));
         } catch {}
-      } else {
-        // If cloud collection is new, sync local projects to cloud so other devices get them
-        try {
-          const localSaved = localStorage.getItem('yp_custom_projects_data');
-          if (localSaved) {
-            const parsed = JSON.parse(localSaved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              const merged = mergeProjects(parsed);
-              saveAllProjectsToFirestore(merged);
-              return;
-            }
-          }
-        } catch {}
-        // Initialize default 38 weeks in Firestore
-        saveAllProjectsToFirestore(INITIAL_WEEKLY_APPS);
       }
     });
 
@@ -185,20 +181,19 @@ export default function App() {
     }
   }, [apps]);
 
-  // Ensure persistence when the tab/window is closed
+  // Ensure persistence when the tab/window is closed (Admin-only)
   useEffect(() => {
     const handleBeforeUnload = () => {
+      if (!isAdmin) return;
       try {
         localStorage.setItem('yp_custom_projects_data', JSON.stringify(apps));
-        const blob = new Blob([JSON.stringify({ projects: apps })], { type: 'application/json' });
-        navigator.sendBeacon?.('/api/projects', blob);
       } catch {
         // ignore
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [apps]);
+  }, [apps, isAdmin]);
 
   // Save favorites to localStorage
   useEffect(() => {
@@ -214,8 +209,12 @@ export default function App() {
     return apps.filter(a => a.projectUrl && a.projectUrl.trim() !== '').length;
   }, [apps]);
 
-  // Handle single app save with immediate direct localStorage flush and Firestore cloud sync
+  // Handle single app save (Strictly Admin Only)
   const handleSaveApp = (updatedApp: WeeklyApp) => {
+    if (!isAdmin) {
+      handleOpenAdminLogin('Sitede değişiklik yapma yetkisi sadece Bugra (Yönetici) hesabına aittir.');
+      return;
+    }
     const nextApps = apps.map(a => a.id === updatedApp.id ? updatedApp : a);
     setApps(nextApps);
     try {
@@ -228,8 +227,12 @@ export default function App() {
     }
   };
 
-  // Quick save URL directly from the card
+  // Quick save URL directly from the card (Strictly Admin Only)
   const handleQuickSaveUrl = (appId: number, url: string) => {
+    if (!isAdmin) {
+      handleOpenAdminLogin('Link değiştirme işlemi sadece Bugra (Yönetici) tarafından yapılabilir.');
+      return;
+    }
     let savedTarget: WeeklyApp | null = null;
     const nextApps = apps.map(a => {
       if (a.id !== appId) return a;
@@ -258,8 +261,12 @@ export default function App() {
     }
   };
 
-  // Handle clear link
+  // Handle clear link (Strictly Admin Only)
   const handleClearLink = (appId: number) => {
+    if (!isAdmin) {
+      handleOpenAdminLogin('Link silme veya temizleme sadece Bugra (Yönetici) tarafından yapılabilir.');
+      return;
+    }
     let clearedTarget: WeeklyApp | null = null;
     const nextApps = apps.map(a => {
       if (a.id !== appId) return a;
@@ -290,8 +297,12 @@ export default function App() {
     }
   };
 
-  // Handle batch save across all devices
+  // Handle batch save across all devices (Strictly Admin Only)
   const handleSaveAllApps = (updatedList: WeeklyApp[]) => {
+    if (!isAdmin) {
+      handleOpenAdminLogin('Toplu link güncelleme sadece Bugra (Yönetici) tarafından yapılabilir.');
+      return;
+    }
     setApps(updatedList);
     try {
       localStorage.setItem('yp_custom_projects_data', JSON.stringify(updatedList));
@@ -358,8 +369,8 @@ export default function App() {
       {/* Top Header with Y.P Logo, Yiğit Poyraz Title & Admin Controls */}
       <Header
         onRandomLaunch={handleRandomLaunch}
-        onOpenBatchManager={() => requireAdmin(() => setIsBatchManagerOpen(true))}
-        onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
+        onOpenBatchManager={() => requireAdmin(() => setIsBatchManagerOpen(true), 'Toplu link yöneticisini açmak ve düzenleme yapmak için yönetici girişi yapmalısınız.')}
+        onOpenAdminLogin={() => handleOpenAdminLogin()}
         onAdminLogout={handleAdminLogout}
         isAdmin={isAdmin}
         activeCount={filteredApps.length}
@@ -381,7 +392,7 @@ export default function App() {
         customLinksCount={customLinksCount}
         linkFilter={linkFilter}
         onSelectLinkFilter={setLinkFilter}
-        onOpenBatchManager={() => requireAdmin(() => setIsBatchManagerOpen(true))}
+        onOpenBatchManager={() => requireAdmin(() => setIsBatchManagerOpen(true), 'Linkleri toplu düzenlemek için yönetici girişi yapmalısınız.')}
       />
 
       {/* Main 38-Week Application Showcase Grid */}
@@ -397,17 +408,26 @@ export default function App() {
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-stone-900 border border-red-950/80 text-amber-400 font-bold">
               {filteredApps.length} / {apps.length}
             </span>
-            <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Bulut Eşitleme Aktif (Firestore): Tüm cihazlardan anlık senkronize
-            </span>
+            
+            {isAdmin ? (
+              <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Yönetici Modu Aktif (Bugra): Değişiklik ve kopyalama/yapıştırma açık
+              </span>
+            ) : (
+              <span className="text-xs text-amber-300 font-mono flex items-center gap-1.5 bg-amber-950/30 border border-amber-800/40 px-2.5 py-0.5 rounded">
+                <Lock className="w-3 h-3 text-amber-400" />
+                Değişiklik & Kopyalama Korumalı (Sadece Bugra Yönetici Yetkilidir)
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => requireAdmin(() => setIsBatchManagerOpen(true))}
+              onClick={() => requireAdmin(() => setIsBatchManagerOpen(true), 'Toplu link yöneticisini kullanmak için yönetici girişi yapmalısınız.')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 border border-amber-500/50 text-amber-400 text-xs font-semibold transition-colors"
             >
+              {!isAdmin && <Lock className="w-3 h-3 text-amber-500" />}
               <Link2 className="w-3.5 h-3.5" />
               <span>Toplu Link Girişi & Yedekleme</span>
             </button>
@@ -445,12 +465,12 @@ export default function App() {
                 key={app.id}
                 app={app}
                 onLaunch={(clickedApp) => setSelectedApp(clickedApp)}
-                onEdit={(clickedApp) => requireAdmin(() => setEditingApp(clickedApp))}
+                onEdit={(clickedApp) => requireAdmin(() => setEditingApp(clickedApp), 'Proje detaylarını değiştirmek için yönetici girişi yapmalısınız.')}
                 onQuickSaveUrl={handleQuickSaveUrl}
                 isFavorite={favorites.includes(app.id)}
                 onToggleFavorite={handleToggleFavorite}
                 isAdmin={isAdmin}
-                onRequireAdmin={() => setIsAdminLoginOpen(true)}
+                onRequireAdmin={handleOpenAdminLogin}
               />
             ))}
           </div>
@@ -469,25 +489,27 @@ export default function App() {
         app={selectedApp}
         onClose={() => setSelectedApp(null)}
         onSelectApp={(newApp) => setSelectedApp(newApp)}
-        onEditApp={(appToEdit) => requireAdmin(() => setEditingApp(appToEdit))}
+        onEditApp={(appToEdit) => requireAdmin(() => setEditingApp(appToEdit), 'Bu projenin linkini veya detaylarını düzenlemek için yönetici girişi yapmalısınız.')}
         allApps={apps}
         isFavorite={selectedApp ? favorites.includes(selectedApp.id) : false}
         onToggleFavorite={handleToggleFavorite}
+        isAdmin={isAdmin}
+        onRequireAdmin={handleOpenAdminLogin}
       />
 
-      {/* Single Project Link & Detail Editor Modal */}
+      {/* Single Project Link & Detail Editor Modal (Admin Only) */}
       <EditProjectModal
         app={editingApp}
-        isOpen={Boolean(editingApp)}
+        isOpen={Boolean(editingApp && isAdmin)}
         onClose={() => setEditingApp(null)}
         onSave={handleSaveApp}
         onClearLink={handleClearLink}
       />
 
-      {/* 38 Weeks Batch Link Manager Modal */}
+      {/* 38 Weeks Batch Link Manager Modal (Admin Only) */}
       <BatchLinkManagerModal
         apps={apps}
-        isOpen={isBatchManagerOpen}
+        isOpen={Boolean(isBatchManagerOpen && isAdmin)}
         onClose={() => setIsBatchManagerOpen(false)}
         onSaveAll={handleSaveAllApps}
       />
@@ -495,8 +517,12 @@ export default function App() {
       {/* Admin Login Modal (Bugra / Bugra123.) */}
       <AdminLoginModal
         isOpen={isAdminLoginOpen}
-        onClose={() => setIsAdminLoginOpen(false)}
+        onClose={() => {
+          setIsAdminLoginOpen(false);
+          setAdminLoginReason(null);
+        }}
         onLoginSuccess={handleLoginSuccess}
+        reason={adminLoginReason}
       />
 
       {/* Real-time Clock & Date Widget (Sağ Alt Köşede Saat & Tarih) */}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { WeeklyApp } from '../types';
 import { 
   Play, Star, ExternalLink, Edit3, Github, 
-  Link2, CheckCircle2, CircleDashed, Plus, Check, X, ArrowUpRight
+  Link2, CheckCircle2, CircleDashed, Plus, Check, X, Copy, Lock
 } from 'lucide-react';
 
 interface AppCardProps {
@@ -13,7 +13,7 @@ interface AppCardProps {
   isFavorite: boolean;
   onToggleFavorite: (id: number) => void;
   isAdmin?: boolean;
-  onRequireAdmin?: () => void;
+  onRequireAdmin?: (reason?: string) => void;
 }
 
 export const AppCard: React.FC<AppCardProps> = ({
@@ -29,15 +29,29 @@ export const AppCard: React.FC<AppCardProps> = ({
   const [isEditingInline, setIsEditingInline] = useState(false);
   const [inlineUrl, setInlineUrl] = useState(app.projectUrl || '');
   const [quickSaved, setQuickSaved] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const hasLink = Boolean(app.projectUrl && app.projectUrl.trim() !== '');
 
   const handleStartEdit = () => {
-    if (!isAdmin && onRequireAdmin) {
-      onRequireAdmin();
+    if (!isAdmin) {
+      onRequireAdmin?.('Sitede herhangi bir değişiklik yapma, link ekleme veya yapıştırma yetkisi sadece Bugra (Yönetici) hesabına aittir.');
       return;
     }
     setIsEditingInline(true);
+  };
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAdmin) {
+      onRequireAdmin?.('Link kopyalama işlemi sadece Bugra (Yönetici) tarafından yapılabilir.');
+      return;
+    }
+    if (app.projectUrl && app.projectUrl.trim()) {
+      navigator.clipboard.writeText(app.projectUrl.trim());
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
   };
 
   const handleOpenProject = (e: React.MouseEvent) => {
@@ -51,6 +65,10 @@ export const AppCard: React.FC<AppCardProps> = ({
 
   const handleSaveInline = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!isAdmin) {
+      onRequireAdmin?.('Değişiklikleri kaydetmek için yönetici girişi yapmalısınız.');
+      return;
+    }
     if (onQuickSaveUrl) {
       onQuickSaveUrl(app.id, inlineUrl.trim());
       setQuickSaved(true);
@@ -83,8 +101,8 @@ export const AppCard: React.FC<AppCardProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => {
-                if (!isAdmin && onRequireAdmin) {
-                  onRequireAdmin();
+                if (!isAdmin) {
+                  onRequireAdmin?.('Sitede proje detaylarını düzenleme yetkisi sadece Bugra (Yönetici) hesabına aittir.');
                   return;
                 }
                 onEdit(app);
@@ -123,7 +141,21 @@ export const AppCard: React.FC<AppCardProps> = ({
         </p>
 
         {/* Interactive Link Status & Fast Inline Input Box */}
-        <div className="mb-4 p-2.5 rounded-lg bg-stone-900/70 border border-red-950/80 transition-all">
+        <div 
+          className="mb-4 p-2.5 rounded-lg bg-stone-900/70 border border-red-950/80 transition-all"
+          onCopy={(e) => {
+            if (!isAdmin) {
+              e.preventDefault();
+              onRequireAdmin?.('Link kopyalama işlemi sadece Bugra (Yönetici) tarafından yapılabilir.');
+            }
+          }}
+          onPaste={(e) => {
+            if (!isAdmin) {
+              e.preventDefault();
+              onRequireAdmin?.('Link yapıştırma işlemi sadece Bugra (Yönetici) tarafından yapılabilir.');
+            }
+          }}
+        >
           {isEditingInline ? (
             <form onSubmit={handleSaveInline} className="flex items-center gap-1.5">
               <input
@@ -153,28 +185,44 @@ export const AppCard: React.FC<AppCardProps> = ({
           ) : (
             <div className="flex items-center justify-between gap-2 text-[11px]">
               <div 
-                className="flex items-center gap-1.5 truncate cursor-pointer"
+                className="flex items-center gap-1.5 truncate cursor-pointer select-none"
                 onClick={handleStartEdit}
                 title={isAdmin ? "Tıklayarak linki hızlıca değiştirin" : "Düzenlemek için Yönetici Girişi Yapın"}
               >
                 {hasLink ? (
                   <>
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span className="font-mono text-amber-400 hover:underline truncate max-w-[170px]">
+                    <span className="font-mono text-amber-400 hover:underline truncate max-w-[150px] select-none">
                       {app.projectUrl?.replace(/^https?:\/\//, '')}
                     </span>
                   </>
                 ) : (
                   <>
                     <CircleDashed className="w-3.5 h-3.5 text-stone-500 shrink-0" />
-                    <span className="text-stone-500 italic hover:text-stone-400">
-                      Link henüz eklenmedi {isAdmin ? '(Tıkla ve yapıştır)' : '(Yönetici Girişi Yap)'}
+                    <span className="text-stone-500 italic hover:text-stone-400 select-none">
+                      Link henüz eklenmedi {isAdmin ? '(Tıkla ve yapıştır)' : '(Yönetici Korumalı)'}
                     </span>
                   </>
                 )}
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
+                {/* Admin-only Copy Link button */}
+                {hasLink && (
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="p-1 rounded bg-stone-800/80 hover:bg-stone-800 text-stone-400 hover:text-amber-400 transition-colors"
+                    title={isAdmin ? "Linki Kopyala (Yönetici)" : "Linki Kopyala (Sadece Yönetici)"}
+                  >
+                    {copiedLink ? (
+                      <Check className="w-3 h-3 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                  </button>
+                )}
+
                 {app.githubUrl && (
                   <a
                     href={app.githubUrl}
@@ -187,12 +235,14 @@ export const AppCard: React.FC<AppCardProps> = ({
                     <Github className="w-3.5 h-3.5" />
                   </a>
                 )}
+
                 <button
                   type="button"
                   onClick={handleStartEdit}
-                  className="text-amber-400 hover:text-amber-300 text-[10px] font-semibold underline"
+                  className="text-amber-400 hover:text-amber-300 text-[10px] font-semibold underline flex items-center gap-1"
                 >
-                  {hasLink ? 'Değiştir' : '+ Link Ekle'}
+                  {!isAdmin && <Lock className="w-2.5 h-2.5 text-amber-500/80" />}
+                  <span>{hasLink ? 'Değiştir' : '+ Link Ekle'}</span>
                 </button>
               </div>
             </div>
