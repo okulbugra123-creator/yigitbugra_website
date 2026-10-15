@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "WeeklyProject": {
+      "title": "WeeklyProject",
+      "description": "Yiğit Poyraz 30 haftalık müfredatına ait proje ve canlı link kaydı",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "number",
+          "description": "Proje ID numarası"
+        },
+        "weekNumber": {
+          "type": "number",
+          "description": "Hafta numarası (1-30)"
+        },
+        "weekLabel": {
+          "type": "string",
+          "description": "Hafta etiketi (örn: Hafta 01)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Proje başlığı",
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "description": "Proje açıklaması",
+          "maxLength": 1000
+        },
+        "projectUrl": {
+          "type": "string",
+          "description": "Canlı proje web linki",
+          "maxLength": 500
+        },
+        "githubUrl": {
+          "type": "string",
+          "description": "GitHub depo adresi",
+          "maxLength": 500
+        },
+        "category": {
+          "type": "string",
+          "description": "Kategori",
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "description": "Proje yayın durumu",
+          "maxLength": 100
+        }
+      },
+      "required": ["id", "weekNumber", "weekLabel", "title"]
+    }
+  },
+  "firestore": {
+    "/weekly_projects/{projectId}": {
+      "schema": {
+        "$ref": "#/entities/WeeklyProject"
+      },
+      "description": "30 haftanın tüm cihazlardan erişilebilir proje ve link kayıtları"
+    }
+  }
+}

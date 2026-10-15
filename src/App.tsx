@@ -10,10 +10,16 @@ import { BatchLinkManagerModal } from './components/BatchLinkManagerModal';
 import { CurriculumRoadmap } from './components/CurriculumRoadmap';
 import { ClockWidget } from './components/ClockWidget';
 import { Footer } from './components/Footer';
-import { Layers, Sparkles, AlertCircle, Link2, Plus } from 'lucide-react';
+import { Layers, Sparkles, AlertCircle, Link2, Plus, CloudCheck, Globe } from 'lucide-react';
+import { 
+  saveProjectToFirestore, 
+  saveAllProjectsToFirestore, 
+  subscribeToFirestoreProjects, 
+  fetchProjectsFromFirestore 
+} from './services/projectsService';
 
 export default function App() {
-  // 30 Weekly Apps state, synchronized with localStorage
+  // 30 Weekly Apps state, synchronized with localStorage & Firestore
   const [apps, setApps] = useState<WeeklyApp[]>(() => {
     try {
       const saved = localStorage.getItem('yp_custom_projects_data');
@@ -48,7 +54,7 @@ export default function App() {
     }
   });
 
-  // Cross-device server sync function
+  // Cross-device server sync fallback
   const syncToServer = async (projectsList: WeeklyApp[]) => {
     try {
       await fetch('/api/projects', {
@@ -56,45 +62,53 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projects: projectsList })
       });
-    } catch (err) {
-      console.warn('Sunucu senkronizasyon hatası:', err);
+    } catch {
+      // ignore server offline errors
     }
   };
 
-  // On mount, fetch server projects so other devices see the saved links
+  // Real-time Firestore synchronization across all devices
   useEffect(() => {
-    const fetchServerProjects = async () => {
-      try {
-        const res = await fetch('/api/projects');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.projects) && data.projects.length === 30) {
-            setApps(data.projects);
-            try {
-              localStorage.setItem('yp_custom_projects_data', JSON.stringify(data.projects));
-            } catch {}
-            return;
-          }
-        }
-      } catch (err) {
-        console.warn('Sunucu verisi alınamadı, yerel depolama devrede:', err);
+    // 1. Subscribe to live Firestore updates from any device
+    const unsubscribe = subscribeToFirestoreProjects((cloudProjects) => {
+      if (cloudProjects && cloudProjects.length === 30) {
+        setApps(cloudProjects);
+        try {
+          localStorage.setItem('yp_custom_projects_data', JSON.stringify(cloudProjects));
+        } catch {}
       }
+    });
 
-      // If server was empty but local has links, sync local to server so other devices can access them
-      try {
-        const localSaved = localStorage.getItem('yp_custom_projects_data');
-        if (localSaved) {
-          const parsed = JSON.parse(localSaved);
-          if (Array.isArray(parsed) && parsed.length === 30 && parsed.some((p: WeeklyApp) => p.projectUrl)) {
-            syncToServer(parsed);
+    // 2. Fetch initial cloud data or seed if cloud is empty
+    fetchProjectsFromFirestore().then((cloudData) => {
+      if (cloudData && cloudData.length === 30) {
+        setApps(cloudData);
+        try {
+          localStorage.setItem('yp_custom_projects_data', JSON.stringify(cloudData));
+        } catch {}
+      } else {
+        // If cloud collection is new, sync local projects to cloud so other devices get them
+        try {
+          const localSaved = localStorage.getItem('yp_custom_projects_data');
+          if (localSaved) {
+            const parsed = JSON.parse(localSaved);
+            if (Array.isArray(parsed) && parsed.length === 30) {
+              saveAllProjectsToFirestore(parsed);
+              return;
+            }
           }
-        }
-      } catch {}
+        } catch {}
+        // Initialize default 30 weeks in Firestore
+        saveAllProjectsToFirestore(INITIAL_WEEKLY_APPS);
+      }
+    });
+
+    return () => {
+      unsubscribe();
     };
-    fetchServerProjects();
   }, []);
 
-  // Save apps whenever updated
+  // Save apps locally whenever updated
   useEffect(() => {
     try {
       localStorage.setItem('yp_custom_projects_data', JSON.stringify(apps));
@@ -108,7 +122,6 @@ export default function App() {
     const handleBeforeUnload = () => {
       try {
         localStorage.setItem('yp_custom_projects_data', JSON.stringify(apps));
-        // Use sendBeacon for guaranteed sync on close if supported
         const blob = new Blob([JSON.stringify({ projects: apps })], { type: 'application/json' });
         navigator.sendBeacon?.('/api/projects', blob);
       } catch {
@@ -133,13 +146,14 @@ export default function App() {
     return apps.filter(a => a.projectUrl && a.projectUrl.trim() !== '').length;
   }, [apps]);
 
-  // Handle single app save with immediate direct localStorage flush and server sync
+  // Handle single app save with immediate direct localStorage flush and Firestore cloud sync
   const handleSaveApp = (updatedApp: WeeklyApp) => {
     const nextApps = apps.map(a => a.id === updatedApp.id ? updatedApp : a);
     setApps(nextApps);
     try {
       localStorage.setItem('yp_custom_projects_data', JSON.stringify(nextApps));
     } catch {}
+    saveProjectToFirestore(updatedApp);
     syncToServer(nextApps);
     if (selectedApp && selectedApp.id === updatedApp.id) {
       setSelectedApp(updatedApp);
@@ -148,18 +162,24 @@ export default function App() {
 
   // Quick save URL directly from the card
   const handleQuickSaveUrl = (appId: number, url: string) => {
+    let savedTarget: WeeklyApp | null = null;
     const nextApps = apps.map(a => {
       if (a.id !== appId) return a;
-      return {
+      const updated = {
         ...a,
         projectUrl: url.trim(),
         status: url.trim() ? ('Yayında' as const) : ('Boş (Proje Bekleniyor)' as const)
       };
+      savedTarget = updated;
+      return updated;
     });
     setApps(nextApps);
     try {
       localStorage.setItem('yp_custom_projects_data', JSON.stringify(nextApps));
     } catch {}
+    if (savedTarget) {
+      saveProjectToFirestore(savedTarget);
+    }
     syncToServer(nextApps);
     if (selectedApp && selectedApp.id === appId) {
       setSelectedApp(prev => prev ? {
@@ -172,19 +192,25 @@ export default function App() {
 
   // Handle clear link
   const handleClearLink = (appId: number) => {
+    let clearedTarget: WeeklyApp | null = null;
     const nextApps = apps.map(a => {
       if (a.id !== appId) return a;
-      return {
+      const updated = {
         ...a,
         projectUrl: '',
         githubUrl: '',
         status: 'Boş (Proje Bekleniyor)' as const
       };
+      clearedTarget = updated;
+      return updated;
     });
     setApps(nextApps);
     try {
       localStorage.setItem('yp_custom_projects_data', JSON.stringify(nextApps));
     } catch {}
+    if (clearedTarget) {
+      saveProjectToFirestore(clearedTarget);
+    }
     syncToServer(nextApps);
     if (selectedApp && selectedApp.id === appId) {
       setSelectedApp(prev => prev ? {
@@ -202,6 +228,7 @@ export default function App() {
     try {
       localStorage.setItem('yp_custom_projects_data', JSON.stringify(updatedList));
     } catch {}
+    saveAllProjectsToFirestore(updatedList);
     syncToServer(updatedList);
     if (selectedApp) {
       const found = updatedList.find(a => a.id === selectedApp.id);
@@ -300,7 +327,7 @@ export default function App() {
             </span>
             <span className="text-xs text-emerald-400 font-mono flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-0.5 rounded">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Tüm Cihazlarla Eşitlendi (Farklı cihazlardan girseniz de görünür)
+              Bulut Eşitleme Aktif (Firestore): Başka cihazdan girseniz de linkleriniz görünür
             </span>
           </div>
 

@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidProject(data) {
+      return data.id is number &&
+        data.weekNumber is number &&
+        data.weekLabel is string && data.weekLabel.size() <= 50 &&
+        data.title is string && data.title.size() <= 200 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+        (!('projectUrl' in data) || (data.projectUrl is string && data.projectUrl.size() <= 500)) &&
+        (!('githubUrl' in data) || (data.githubUrl is string && data.githubUrl.size() <= 500)) &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 100)) &&
+        (!('status' in data) || (data.status is string && data.status.size() <= 100));
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 30 Haftalık Projeler Koleksiyonu (Tüm cihazlardan okunabilir ve güncellenebilir)
+    match /weekly_projects/{projectId} {
+      allow read: if true;
+      allow create, update: if isValidId(projectId) && isValidProject(request.resource.data);
+      allow delete: if false;
+    }
+  }
+}
